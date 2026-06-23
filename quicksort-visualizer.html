@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>QuickSort Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:       #0d0d0d;
+  --surface:  #161616;
+  --surface2: #1e1e1e;
+  --line:     #2a2a2a;
+  --line2:    #333;
+  --text:     #e8e8e8;
+  --muted:    #666;
+  --muted2:   #444;
+  --amber:    #f5a623;
+  --amber-dim:#7a5212;
+  --teal:     #2dd4bf;
+  --teal-dim: #134e4a;
+  --red:      #f87171;
+  --red-dim:  #7f1d1d;
+  --green:    #4ade80;
+  --green-dim:#14532d;
+  --white:    #ffffff;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'IBM Plex Sans', sans-serif;
+}
+
+html,body{height:100%;overflow:hidden}
+
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
+
+.topbar{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 20px;
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;
+  flex-wrap:wrap;
+}
+
+.sep{width:1px;height:20px;background:var(--line2);flex-shrink:0}
+
+.arr-input{
+  font-family:var(--mono);
+  font-size:12px;
+  background:var(--surface2);
+  border:1px solid var(--line2);
+  color:var(--text);
+  padding:5px 10px;
+  border-radius:4px;
+  outline:none;
+  width:240px;
+  transition:border-color .15s;
+}
+.arr-input:focus{border-color:var(--amber)}
+.arr-input::placeholder{color:var(--muted)}
+
+.pivot-label{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.pivot-btns{display:flex;gap:4px}
+
+.ptbtn{
+  font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:4px;
+  border:1px solid var(--line2);background:var(--surface2);color:var(--muted);
+  cursor:pointer;transition:all .15s;
+}
+.ptbtn.active{background:var(--amber);border-color:var(--amber);color:#000;font-weight:600}
+.ptbtn:not(.active):hover{border-color:var(--amber);color:var(--amber)}
+
+.preset-row{display:flex;gap:4px;flex-wrap:wrap}
+.pre{
+  font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;
+  border:1px solid var(--line2);background:transparent;color:var(--muted);
+  cursor:pointer;transition:all .15s;
+}
+.pre:hover{border-color:var(--line2);color:var(--text)}
+
+.apply-btn{
+  font-family:var(--mono);font-size:11px;font-weight:600;padding:5px 14px;
+  border-radius:4px;border:1px solid var(--amber);background:transparent;
+  color:var(--amber);cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.apply-btn:hover{background:var(--amber);color:#000}
+
+.explain-zone{
+  flex-shrink:0;padding:14px 24px 10px;border-bottom:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  min-height:72px;justify-content:center;
+}
+.step-counter{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:0.5px}
+.explain-text{
+  font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text);
+  text-align:center;line-height:1.5;max-width:900px;
+}
+.explain-text .kw-pivot{color:var(--amber)}
+.explain-text .kw-cmp  {color:var(--teal)}
+.explain-text .kw-swap {color:var(--red)}
+.explain-text .kw-done {color:var(--green)}
+.explain-text .kw-val  {color:var(--white);font-weight:600}
+
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+.chart-wrap{
+  flex:1;padding:12px 24px 0;display:flex;flex-direction:column;
+  min-height:0;position:relative;
+}
+
+.chart-legend{display:flex;gap:16px;margin-bottom:8px;flex-shrink:0}
+.leg{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+#barchart{flex:1;display:flex;align-items:flex-end;gap:4px;min-height:0;position:relative}
+
+.bw{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  height:100%;justify-content:flex-end;gap:3px;position:relative;
+}
+
+.bar{
+  width:100%;border-radius:2px 2px 0 0;
+  transition:height .22s cubic-bezier(.4,0,.2,1), background .18s ease;
+  background:var(--surface2);border:1px solid var(--line2);position:relative;
+}
+.bar.s-pivot {background:var(--amber);border-color:var(--amber);box-shadow:0 0 0 1px var(--amber-dim)}
+.bar.s-cmp   {background:var(--teal); border-color:var(--teal); box-shadow:0 0 0 1px var(--teal-dim)}
+.bar.s-left  {background:#2563eb;border-color:#2563eb}
+.bar.s-right {background:#7c3aed;border-color:#7c3aed}
+.bar.s-swap  {background:var(--red);border-color:var(--red);box-shadow:0 0 0 1px var(--red-dim)}
+.bar.s-sorted{background:var(--green);border-color:var(--green)}
+
+.bval{
+  font-family:var(--mono);font-size:9px;color:var(--text);
+  text-align:center;flex-shrink:0;min-width:0;font-weight:600;
+}
+.bptr{
+  font-family:var(--mono);font-size:9px;color:var(--amber);
+  text-align:center;min-height:12px;flex-shrink:0;line-height:1;
+}
+
+.active-underline{
+  width:100%;height:0;margin-top:5px;flex-shrink:0;
+  border-bottom:2px dashed transparent;transition:border-color .15s;
+}
+.bw.in-range .active-underline{border-bottom-color:var(--amber);}
+
+.controls{
+  flex-shrink:0;border-top:1px solid var(--line);padding:10px 24px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.stats-row{display:flex;gap:16px;font-family:var(--mono);font-size:11px;color:var(--muted);align-items:center}
+.stats-row b{color:var(--text);font-weight:600}
+.ctrl-sep{width:1px;height:24px;background:var(--line2);flex-shrink:0}
+
+.cbtn{
+  display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;
+  font-weight:500;padding:6px 12px;border-radius:4px;border:1px solid var(--line2);
+  background:var(--surface2);color:var(--text);cursor:pointer;transition:all .15s;
+  white-space:nowrap;user-select:none;
+}
+.cbtn:hover:not(:disabled){border-color:var(--amber);color:var(--amber)}
+.cbtn:active:not(:disabled){transform:scale(.97)}
+.cbtn:disabled{opacity:.3;cursor:not-allowed}
+.cbtn.play-btn{border-color:var(--amber);color:var(--amber)}
+.cbtn.play-btn:hover:not(:disabled){background:var(--amber);color:#000}
+
+.speed-group{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+input[type=range]{-webkit-appearance:none;width:100px;height:2px;background:var(--line2);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--amber);border:2px solid var(--bg);cursor:pointer}
+
+.kbd{font-family:var(--mono);font-size:9px;color:var(--muted2);border:1px solid var(--muted2);border-radius:3px;padding:1px 4px}
+
+.complexity-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:200;align-items:center;justify-content:center;
+}
+.complexity-overlay.show{display:flex}
+.complexity-card{
+  background:var(--surface);border:1px solid var(--line2);border-radius:8px;
+  padding:36px 44px;max-width:520px;width:90%;text-align:center;
+}
+.cc-title{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:24px}
+.cc-done{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--amber);margin-bottom:24px}
+.cc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px}
+.cc-cell{background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:14px 8px}
+.cc-cell-label{font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+.cc-cell-val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--amber)}
+.cc-table{width:100%;border-collapse:collapse;margin-bottom:24px;font-family:var(--mono);font-size:12px}
+.cc-table td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left}
+.cc-table td:first-child{color:var(--muted)}
+.cc-table .best,.cc-table .avg,.cc-table .worst{color:var(--amber)}
+.cc-note{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:20px;text-align:left}
+.cc-close{font-family:var(--mono);font-size:12px;font-weight:600;padding:8px 24px;border-radius:4px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .15s}
+.cc-close:hover{border-color:var(--amber);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <input id="arrInput" class="arr-input" type="text"
+    placeholder="e.g. 38, 27, 43, 3, 9, 82, 10" spellcheck="false"/>
+  <div class="preset-row">
+    <button class="pre" onclick="preset('random')">random</button>
+    <button class="pre" onclick="preset('sorted')">sorted</button>
+    <button class="pre" onclick="preset('reverse')">reverse</button>
+    <button class="pre" onclick="preset('nearly')">nearly sorted</button>
+  </div>
+  <div class="sep"></div>
+  <span class="pivot-label">pivot:</span>
+  <div class="pivot-btns">
+    <button class="ptbtn active" id="pt-random" onclick="setPivot('random')">Random</button>
+    <button class="ptbtn" id="pt-perfect" onclick="setPivot('perfect')">Perfect</button>
+  </div>
+  <div class="sep"></div>
+  <button class="apply-btn" onclick="applyAndReset()">Apply &amp; Start</button>
+</div>
+
+<div class="explain-zone">
+  <div class="step-counter" id="stepCounter">step 0 / 0</div>
+  <div class="explain-text" id="explainText">
+    Enter an array above and press <span class="kw-pivot">Apply &amp; Start</span> then step through or hit play.
+  </div>
+</div>
+
+<div class="content">
+  <div class="chart-wrap">
+    <div class="chart-legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>pivot</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--teal)"></div>scanning</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>swapping</div>
+      <div class="leg"><div class="leg-dot" style="background:#2563eb"></div>left region</div>
+      <div class="leg"><div class="leg-dot" style="background:#7c3aed"></div>right region</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>sorted</div>
+    </div>
+    <div id="barchart"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="stats-row">
+    <span>comparisons <b id="sCmp">0</b></span>
+    <span>swaps <b id="sSw">0</b></span>
+    <span>step <b id="sSt">0</b>/<b id="sTotal">0</b></span>
+  </div>
+  <div class="ctrl-sep"></div>
+  <button class="cbtn" id="btnBack" onclick="doBack()" disabled>
+    &#9664; Back <span class="kbd">&#8592;</span>
+  </button>
+  <button class="cbtn" id="btnStep" onclick="doStep()" disabled>
+    Step &#9654; <span class="kbd">&#8594;</span>
+  </button>
+  <button class="cbtn play-btn" id="btnPlay" onclick="togglePlay()" disabled>
+    &#9654; Play <span class="kbd">Space</span>
+  </button>
+  <button class="cbtn" onclick="doReset()">
+    Reset <span class="kbd">R</span>
+  </button>
+  <div class="ctrl-sep"></div>
+  <div class="speed-group">
+    slow
+    <input type="range" id="speedRange" min="80" max="1400" value="700"
+      oninput="speed=1480-+this.value">
+    fast
+  </div>
+</div>
+
+<div class="complexity-overlay" id="complexityOverlay">
+  <div class="complexity-card">
+    <div class="cc-title">Sort Complete</div>
+    <div class="cc-done" id="ccArr"></div>
+    <div class="cc-grid">
+      <div class="cc-cell">
+        <div class="cc-cell-label">Comparisons</div>
+        <div class="cc-cell-val" id="ccCmp">0</div>
+      </div>
+      <div class="cc-cell">
+        <div class="cc-cell-label">Swaps</div>
+        <div class="cc-cell-val" id="ccSw">0</div>
+      </div>
+      <div class="cc-cell">
+        <div class="cc-cell-label">Recursion Depth</div>
+        <div class="cc-cell-val" id="ccDep">0</div>
+      </div>
+    </div>
+    <table class="cc-table">
+      <tr><td>Best case</td>  <td class="best">O(n log n)</td><td style="color:var(--muted);font-size:10px">balanced splits, ideal pivot</td></tr>
+      <tr><td>Average case</td><td class="avg">O(n log n)</td><td style="color:var(--muted);font-size:10px">random data, random pivot</td></tr>
+      <tr><td>Worst case</td> <td class="worst">O(n&#178;)</td><td style="color:var(--muted);font-size:10px">sorted array + bad pivot</td></tr>
+      <tr><td>Space</td>      <td class="avg">O(log n)</td>   <td style="color:var(--muted);font-size:10px">call stack depth</td></tr>
+    </table>
+    <div class="cc-note" id="ccNote"></div>
+    <button class="cc-close" onclick="closeComplexity()">Close</button>
+  </div>
+</div>
+
+<script>
+let arr       = [];
+let steps     = [];
+let stepIdx   = -1;
+let playing   = false;
+let playTimer = null;
+let speed     = 780;
+let pivotMode = 'random';
+
+function preset(type){
+  const n = 10;
+  let a;
+  if(type==='random')  a = Array.from({length:n},()=>Math.floor(Math.random()*88)+5);
+  if(type==='sorted')  a = Array.from({length:n},(_,i)=>(i+1)*8);
+  if(type==='reverse') a = Array.from({length:n},(_,i)=>(n-i)*8);
+  if(type==='nearly'){
+    a = Array.from({length:n},(_,i)=>(i+1)*8);
+    for(let k=0;k<3;k++){const x=~~(Math.random()*n),y=~~(Math.random()*n);[a[x],a[y]]=[a[y],a[x]];}
+  }
+  document.getElementById('arrInput').value = a.join(', ');
+  applyAndReset();
+}
+
+function setPivot(m){
+  pivotMode = m;
+  document.getElementById('pt-random').classList.toggle('active', m==='random');
+  document.getElementById('pt-perfect').classList.toggle('active', m==='perfect');
+}
+
+function applyAndReset(){
+  const raw = document.getElementById('arrInput').value;
+  const parsed = raw.split(/[,\s]+/).filter(Boolean).map(Number)
+                    .filter(n=>Number.isFinite(n)&&n>0&&n<=999).slice(0,20);
+  if(parsed.length<2){flashExplain('Need at least 2 numbers.'); return;}
+  arr = parsed;
+  document.getElementById('arrInput').value = arr.join(', ');
+  buildAndReset();
+}
+
+// ─────────────────────────────────────────────────────────
+//  STEP BUILDER — Hoare partition scheme
+//
+//  How it works:
+//  1. Pick a pivot value (middle element of current range)
+//  2. i starts at the LEFT end, j starts at the RIGHT end
+//  3. i scans rightward looking for an element >= pivot
+//  4. j scans leftward  looking for an element <= pivot
+//  5. If i < j: a[i] and a[j] are on the wrong sides — swap
+//  6. Repeat until i >= j (pointers have crossed)
+//  7. j is now the partition point: recurse [lo..j] and [j+1..hi]
+//
+//  The pivot is NOT moved to the end. It just sits in the array
+//  and one of the pointers naturally passes through it.
+// ─────────────────────────────────────────────────────────
+function buildSteps(inputArr, mode){
+  const stps   = [];
+  const a      = [...inputArr];
+  const n      = a.length;
+  const sorted = new Set();
+  let cmp=0, sw=0, maxDepth=0;
+
+  function choosePivotVal(lo, hi){
+    if(mode==='perfect'){
+      const sub = a.slice(lo, hi+1).map((v,k)=>({v,k:lo+k}));
+      sub.sort((x,y)=>x.v-y.v);
+      return sub[~~(sub.length/2)].v;
+    }
+    return a[lo + ~~((hi-lo)/2)];
+  }
+
+  function snap(state, ptrs, msg, lo, hi, depth, pivotIdx){
+    const st={};
+    sorted.forEach(k=>{ st[k]='s-sorted'; });
+    Object.assign(st, state);
+    if(pivotIdx!==undefined && !sorted.has(pivotIdx)) st[pivotIdx]='s-pivot';
+    stps.push({ arr:[...a], state:st, ptrs:ptrs||{}, range:[lo,hi], msg, cmp, sw, depth });
+  }
+
+  function qs(lo, hi, depth){
+    if(lo >= hi){
+      if(lo === hi && !sorted.has(lo)){
+        sorted.add(lo);
+        snap({[lo]:'s-sorted'}, {},
+          `<span class="kw-done">Single element</span> <span class="kw-val">${a[lo]}</span> at [${lo}] — already in its correct position.`,
+          lo, hi, depth);
+      }
+      return;
+    }
+    if(depth > maxDepth) maxDepth = depth;
+
+    const pivotVal = choosePivotVal(lo, hi);
+    const midIdx   = lo + ~~((hi-lo)/2);
+    let pivotIdx   = midIdx;
+
+    snap(
+      {[midIdx]:'s-pivot'},
+      {[midIdx]:'P'},
+      `<span class="kw-pivot">Pivot = ${pivotVal}</span> (middle of [${lo}…${hi}]). ` +
+      `<b>i</b> starts at [${lo}] and walks right. <b>j</b> starts at [${hi}] and walks left. They will cross somewhere in the middle.`,
+      lo, hi, depth, pivotIdx
+    );
+
+    let i = lo;
+    let j = hi;
+
+    while(true){
+      // i scans right: stop when a[i] >= pivot
+      while(a[i] < pivotVal){
+        cmp++;
+        snap(
+          { ...Object.fromEntries([...Array(i-lo).keys()].map(k=>[lo+k,'s-left'])),
+            [i]:'s-cmp', [j]:'s-right' },
+          {[i]:'i', [j]:'j'},
+          `<span class="kw-cmp">i moves right:</span> a[${i}] = <span class="kw-val">${a[i]}</span> &lt; pivot <span class="kw-val">${pivotVal}</span>, so i keeps going.`,
+          lo, hi, depth, pivotIdx
+        );
+        i++;
+      }
+
+      // j scans left: stop when a[j] <= pivot
+      while(a[j] > pivotVal){
+        cmp++;
+        snap(
+          { ...Object.fromEntries([...Array(i-lo).keys()].map(k=>[lo+k,'s-left'])),
+            [i]:'s-cmp', [j]:'s-right' },
+          {[i]:'i', [j]:'j'},
+          `<span class="kw-cmp">j moves left:</span> a[${j}] = <span class="kw-val">${a[j]}</span> &gt; pivot <span class="kw-val">${pivotVal}</span>, so j keeps going.`,
+          lo, hi, depth, pivotIdx
+        );
+        j--;
+      }
+
+      // check if pointers crossed
+      cmp++;
+      if(i >= j){
+        snap(
+          {[i]:'s-cmp', [j]:'s-cmp'},
+          {[i]:'i', [j]:'j'},
+          `i (${i}) reached or passed j (${j}) — <span class="kw-done">pointers crossed, partition complete.</span> Recurse left [${lo}…${j}] and right [${j+1}…${hi}].`,
+          lo, hi, depth, pivotIdx
+        );
+        break;
+      }
+
+      // swap: a[i] is too big for the left side, a[j] is too small for the right side
+      snap(
+        {[i]:'s-swap', [j]:'s-swap'},
+        {[i]:'i', [j]:'j'},
+        `a[${i}] = <span class="kw-val">${a[i]}</span> is too large for the left side. a[${j}] = <span class="kw-val">${a[j]}</span> is too small for the right side. <span class="kw-swap">Swap.</span>`,
+        lo, hi, depth, pivotIdx
+      );
+      sw++;
+      if(pivotIdx===i) pivotIdx=j;
+      else if(pivotIdx===j) pivotIdx=i;
+      [a[i], a[j]] = [a[j], a[i]];
+      snap(
+        {[i]:'s-left', [j]:'s-left'},
+        {[i]:'i', [j]:'j'},
+        `<span class="kw-swap">Swapped:</span> a[${i}] is now <span class="kw-val">${a[i]}</span>, a[${j}] is now <span class="kw-val">${a[j]}</span>. Both pointers move one step inward and continue.`,
+        lo, hi, depth, pivotIdx
+      );
+      i++;
+      j--;
+    }
+
+    qs(lo, j, depth+1);
+    qs(j+1, hi, depth+1);
+  }
+
+  snap({}, {},
+    `Starting QuickSort on [<span class="kw-val">${a.join(', ')}</span>]. ` +
+    `Using <span class="kw-pivot">Hoare partition</span>: two pointers start at opposite ends and walk toward each other.`,
+    0, n-1, 0);
+
+  qs(0, n-1, 0);
+
+  const allSt={};
+  for(let k=0;k<n;k++) allSt[k]='s-sorted';
+  stps.push({
+    arr:[...a], state:allSt, ptrs:{}, range:[0,n-1],
+    msg:`<span class="kw-done">Sorted!</span> [<span class="kw-val">${a.join(', ')}</span>]`,
+    cmp, sw, depth:maxDepth, _done:true,
+  });
+
+  return {steps:stps, maxDepth};
+}
+
+function renderStep(idx){
+  if(idx<0||idx>=steps.length) return;
+  const s = steps[idx];
+
+  document.getElementById('explainText').innerHTML = s.msg;
+  document.getElementById('stepCounter').textContent = `step ${idx+1} / ${steps.length}`;
+  document.getElementById('sCmp').textContent   = s.cmp;
+  document.getElementById('sSw').textContent    = s.sw;
+  document.getElementById('sSt').textContent    = idx+1;
+  document.getElementById('sTotal').textContent = steps.length;
+
+  renderBars(s);
+
+  document.getElementById('btnBack').disabled = idx <= 0;
+  document.getElementById('btnStep').disabled = idx >= steps.length-1;
+  document.getElementById('btnPlay').disabled = false;
+}
+
+function renderBars(s){
+  const chart  = document.getElementById('barchart');
+  const maxVal = Math.max(...arr, 1);
+  const n      = s.arr.length;
+
+  if(chart.children.length !== n){
+    chart.innerHTML = '';
+    for(let i=0;i<n;i++){
+      const bw   = document.createElement('div'); bw.className='bw';
+      const bar  = document.createElement('div'); bar.className='bar';
+      const bval = document.createElement('div'); bval.className='bval';
+      const bptr = document.createElement('div'); bptr.className='bptr';
+      const bact = document.createElement('div'); bact.className='active-underline';
+      bw.appendChild(bar);
+      bw.appendChild(bval);
+      bw.appendChild(bptr);
+      bw.appendChild(bact);
+      chart.appendChild(bw);
+    }
+  }
+
+  for(let i=0;i<n;i++){
+    const v    = s.arr[i];
+    const bw   = chart.children[i];
+    const bar  = bw.children[0];
+    const bval = bw.children[1];
+    const bptr = bw.children[2];
+
+    bar.style.height = Math.max(3,(v/maxVal)*100)+'%';
+    bar.className    = 'bar '+(s.state[i]||'');
+    bval.textContent = v;
+
+    const ptr = s.ptrs[i]||'';
+    bptr.textContent = ptr;
+    bptr.style.color = ptr.startsWith('P') ? 'var(--amber)' : 'var(--teal)';
+
+    const inRange = s.range && i>=s.range[0] && i<=s.range[1];
+    bw.classList.toggle('in-range', !!inRange);
+  }
+}
+
+function togglePlay(){ if(playing) pause(); else play(); }
+
+function play(){
+  if(stepIdx >= steps.length-1) return;
+  playing = true;
+  const btn = document.getElementById('btnPlay');
+  btn.innerHTML = '&#9646;&#9646; Pause <span class="kbd">Space</span>';
+  tick();
+}
+
+function pause(){
+  playing = false;
+  clearTimeout(playTimer);
+  const btn = document.getElementById('btnPlay');
+  btn.innerHTML = '&#9654; Play <span class="kbd">Space</span>';
+}
+
+function tick(){
+  if(!playing) return;
+  if(stepIdx >= steps.length-1){ pause(); showComplexity(); return; }
+  stepIdx++;
+  renderStep(stepIdx);
+  playTimer = setTimeout(tick, speed);
+}
+
+function doStep(){
+  pause();
+  if(stepIdx < steps.length-1){
+    stepIdx++;
+    renderStep(stepIdx);
+    if(stepIdx === steps.length-1) showComplexity();
+  }
+}
+
+function doBack(){
+  pause();
+  if(stepIdx > 0){ stepIdx--; renderStep(stepIdx); }
+}
+
+function doReset(){ pause(); stepIdx=-1; buildAndReset(); }
+
+function buildAndReset(){
+  pause();
+  if(arr.length < 2) return;
+  const result = buildSteps(arr, pivotMode);
+  steps   = result.steps;
+  stepIdx = -1;
+
+  document.getElementById('sCmp').textContent    = '0';
+  document.getElementById('sSw').textContent     = '0';
+  document.getElementById('sSt').textContent     = '0';
+  document.getElementById('sTotal').textContent  = steps.length;
+  document.getElementById('stepCounter').textContent = `step 0 / ${steps.length}`;
+  document.getElementById('explainText').innerHTML =
+    `Array ready. <span class="kw-pivot">${arr.join(', ')}</span> — press Step or Play.`;
+  document.getElementById('btnPlay').disabled = false;
+  document.getElementById('btnStep').disabled = false;
+  document.getElementById('btnBack').disabled = true;
+
+  document.getElementById('barchart').innerHTML = '';
+  renderBars({ arr:[...arr], state:{}, ptrs:{} });
+}
+
+function showComplexity(){
+  const s = steps[steps.length-1];
+  document.getElementById('ccArr').textContent = `[${s.arr.join(', ')}]`;
+  document.getElementById('ccCmp').textContent = s.cmp;
+  document.getElementById('ccSw').textContent  = s.sw;
+  document.getElementById('ccDep').textContent = s.depth;
+
+  let note = '';
+  if(pivotMode==='perfect'){
+    note = '<b>Perfect pivot</b> always picks the true median, guaranteeing O(n log n) with balanced recursion.';
+  } else {
+    const nn = arr.length;
+    const expected = Math.round(nn * Math.log2(nn));
+    note = `Middle-element pivot gives O(n log n) on average. For n=${nn} expected comparisons ≈ ${expected}. You used <b>${s.cmp}</b>.`;
+    if(s.cmp > nn*(nn-1)/2 * 0.6)
+      note += ' High count — near worst-case O(n²) behaviour.';
+  }
+  document.getElementById('ccNote').innerHTML = note;
+  document.getElementById('complexityOverlay').classList.add('show');
+}
+
+function closeComplexity(){
+  document.getElementById('complexityOverlay').classList.remove('show');
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.code==='Space')      { e.preventDefault(); togglePlay(); }
+  if(e.code==='ArrowRight') { e.preventDefault(); doStep(); }
+  if(e.code==='ArrowLeft')  { e.preventDefault(); doBack(); }
+  if(e.code==='KeyR')       { e.preventDefault(); doReset(); }
+  if(e.code==='Escape')     closeComplexity();
+});
+
+function flashExplain(msg){
+  document.getElementById('explainText').innerHTML =
+    `<span style="color:var(--red)">${msg}</span>`;
+}
+
+arr = [38,27,43,3,9,82,10,15];
+document.getElementById('arrInput').value = arr.join(', ');
+buildAndReset();
+</script>
+</body>
+</html>
